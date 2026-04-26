@@ -20,15 +20,21 @@ The laboratory implements a **Canary Deployment** strategy where traffic is incr
 
 ```text
 /demo-devsecops-lab
-├── src/
-│   └── DevSecOpsApi/          # .NET 10 Source Code & Instrumentation
-├── iac/                       # Infrastructure as Code (Terraform)
-│   ├── k3d.tf                 # Local Cluster definition
-│   └── monitoring.tf          # Prometheus/Grafana Helm charts
-├── k8s/                       # GitOps & Kubernetes Manifests
-│   └── rollouts/              # Canary, Analysis & Service definitions
-├── .github/                   # CI/CD Workflows (GitHub Actions)
-└── Dockerfile                 # Multi-stage secure container build
+├── iac/
+│   ├── main.tf                 # Orquestador (llama a los módulos)
+│   ├── variables.tf            # Variables globales
+│   ├── providers.tf            # Configuración de K3d, Helm y Kubernetes
+│   └── modules/
+│       ├── cluster/            # Módulo para K3d
+│       │   ├── main.tf
+│       │   ├── outputs.tf
+│       │   └── variables.tf
+│       ├── monitoring/         # Módulo para Prometheus y Grafana
+│       │   ├── main.tf
+│       │   └── variables.tf
+│       └── delivery/           # Módulo para Argo Rollouts
+│           ├── main.tf
+│           └── variables.tf
 ```
 
 ## 🚀 Getting Started
