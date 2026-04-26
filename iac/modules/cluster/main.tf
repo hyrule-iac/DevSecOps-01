@@ -1,15 +1,16 @@
-resource "k3d_cluster" "devsecops" {
-    name = var.cluster_name
-    servers = 1
-    agents = var.nodes
-    kube_api {
-    host_ip = "127.0.0.1"
-    host_port = 6443
+resource "null_resource" "k3d_cluster" {
+    triggers = {
+        cluster_name = var.cluster_name
+        nodes        = var.nodes
     }
-    port {
-    host_port      = 8080
-    container_port = 80
-    node_filters   = ["loadbalancer"]
-    }
+
+provisioner "local-exec" {
+    command = "k3d cluster create ${self.triggers.cluster_name} --servers 1 --agents ${self.triggers.nodes} -p 8080:80@loadbalancer -p 6443:6443"
 }
 
+
+    provisioner "local-exec" {
+        when    = destroy
+        command = "k3d cluster delete ${self.triggers.cluster_name}"
+    }
+    }

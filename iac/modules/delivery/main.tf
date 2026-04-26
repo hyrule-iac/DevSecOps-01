@@ -5,7 +5,7 @@ resource "helm_release" "argo_rollouts" {
   namespace = var.namespace
   create_namespace = true
 
-  set = {
+  set {
     name = "dashboards.enabled"
     value = true
   }

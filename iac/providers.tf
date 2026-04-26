@@ -1,10 +1,8 @@
 terraform {
-  required_version = "~> 1.14.0"
+
+  required_version = ">= 1.5.0"
+
   required_providers {
-    k3d = {
-      source  = "pvreese/k3d"
-      version = "~> 0.0.6"
-    }
     helm = {
       source  = "hashicorp/helm"
       version = "~> 2.12.1"
@@ -13,13 +11,12 @@ terraform {
       source  = "hashicorp/kubernetes"
       version = "~> 2.25.0"
     }
-
   }
 }
 
-provider "k3d" {}
 provider "helm" {
-  kubernetes = {
+  # Error corregido: Se quita el "=" después de la palabra kubernetes
+  kubernetes {
     config_path = "~/.kube/config"
   }
 }
