@@ -5,14 +5,12 @@ resource "helm_release" "prometheus_stack" {
   namespace        = var.namespace
   create_namespace = true
   wait             = false # Acelera el despliegue inicial
-
-  # Usamos la sintaxis de bloque dinámico o simple
-  set {
+    set {
     name  = "prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues"
     value = "false"
   }
 
-  set {
+    set {
     name  = "prometheus.prometheusSpec.retention"
     value = "1d"
   }

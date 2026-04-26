@@ -14,6 +14,6 @@ module "delivery" {
 # Módulo para el Stack de Observabilidad
 module "monitoring" {
   source     = "./modules/monitoring"
-  namespace = "monitoring"
+  namespace  = "monitoring"
   depends_on = [module.cluster]
 }
