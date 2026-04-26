@@ -6,10 +6,10 @@ var app = builder.Build();
 
 // 📊 Business & Performance Metrics
 // 1. Feature Click Counter (Business Value)
-var clickCounter = Metrics.CreateCounter("app_feature_clicks_total", "Total count of interactive button clicks");
+var clickCounter = Metrics.CreateCounter("app_feature_clicks_total", "Total count of interactive site button clicks");
 
 // 2. Error Counter (For Alerting and Rollbacks)
-var errorCounter = Metrics.CreateCounter("app_business_errors_total", "Total count of simulated 500 errors");
+var errorCounter = Metrics.CreateCounter("app_business_errors_total", "Total count of simulated https 500 errors");
 
 // 3. Latency Histogram (Critical for P95/P99 Grafana Dashboards and Argo Analysis)
 var requestDuration = Metrics.CreateHistogram("app_request_duration_seconds", 
