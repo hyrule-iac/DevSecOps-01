@@ -14,10 +14,10 @@ apiVersion: k3d.io/v1alpha5
 kind: Simple
 metadata:
   name: ${var.cluster_name}
-servers: 2
+servers: 1
 agents: ${var.nodes}
 ports:
-  - port: "8081:80"
+  - port: "8086:80"
     nodeFilters:
       - "loadbalancer"
 EOF
