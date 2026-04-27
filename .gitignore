@@ -14,7 +14,10 @@
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
-
+# Executable files
+*.exe
+kubectl-argo-rollouts.exe
+k8s/rollouts/kubectl-argo-rollouts-windows-amd64.exe
 # Mono auto generated files
 mono_crash.*
 
