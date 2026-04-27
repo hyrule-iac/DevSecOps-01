@@ -1,7 +1,7 @@
 variable "lab_name" {
   description = "Nombre del proyecto DevSecOps"
   type        = string
-  default     = "demo-devsecops-lab"
+  default     = "Argo-cluster"
 }
 
 variable "worker_nodes" {

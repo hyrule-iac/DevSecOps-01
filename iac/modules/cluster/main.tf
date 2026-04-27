@@ -1,16 +1,24 @@
-resource "null_resource" "k3d_cluster" {
-    triggers = {
-        cluster_name = var.cluster_name
-        nodes        = var.nodes
+terraform {
+required_providers {
+    k3d = {
+        source  = "sneakybugs/k3d"
+        version = ">= 1.0.0"
+        }
     }
-
-provisioner "local-exec" {
-    command = "k3d cluster create ${self.triggers.cluster_name} --servers 1 --agents ${self.triggers.nodes} -p 8080:80@loadbalancer -p 6443:6443"
 }
+resource "k3d_cluster" "this" {
+  name = var.cluster_name
 
-
-    provisioner "local-exec" {
-        when    = destroy
-        command = "k3d cluster delete ${self.triggers.cluster_name}"
-    }
-    }
+  k3d_config = <<EOF
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: ${var.cluster_name}
+servers: 2
+agents: ${var.nodes}
+ports:
+  - port: "8081:80"
+    nodeFilters:
+      - "loadbalancer"
+EOF
+}
