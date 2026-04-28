@@ -1,0 +1,72 @@
+name: cd
+
+on:
+  workflow_run:
+    workflows:
+      - ci
+    types:
+      - completed
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/devsecopslab01
+
+permissions:
+  contents: write
+
+jobs:
+  update-rollout-manifest:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main'
+      )
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
+
+      - name: Compute immutable image reference
+        id: image
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            SHA="${GITHUB_SHA}"
+          else
+            SHA="${{ github.event.workflow_run.head_sha }}"
+          fi
+          echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Update rollout image
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("k8s/rollouts/rollout.yaml")
+          image = "${{ steps.image.outputs.image }}"
+          text = path.read_text()
+          lines = text.splitlines()
+          for i, line in enumerate(lines):
+              if line.strip().startswith("image:"):
+                  lines[i] = "          image: " + image
+                  break
+          else:
+              raise SystemExit("image line not found in rollout.yaml")
+          path.write_text("\n".join(lines) + "\n")
+          PY
+
+      - name: Commit updated rollout manifest
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add k8s/rollouts/rollout.yaml
+          git diff --cached --quiet && exit 0
+          git commit -m "cd: update rollout image to ${{ steps.image.outputs.image }}"
+          git push

@@ -1,0 +1,25 @@
+name: deploy-k3d-self-hosted
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "k8s/rollouts/rollout.yaml"
+      - "k8s/rollouts/analysis-template.yaml"
+      - ".github/workflows/deploy-k3d-self-hosted.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply rollout manifests to local k3d cluster
+        shell: powershell
+        run: |
+          kubectl apply -f k8s/rollouts/
+          kubectl argo rollouts get rollout demo-devsecops-api -n default
