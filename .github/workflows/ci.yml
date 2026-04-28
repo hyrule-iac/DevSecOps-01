@@ -1,4 +1,4 @@
-name: ci
+name: CI
 
 on:
   push:
@@ -22,19 +22,46 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout Git Code
         uses: actions/checkout@v4
 
-      - name: Setup .NET
+      - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
 
-      - name: Restore
+      - name: Restore API
         run: dotnet restore src/DevSecOpsApi/DevSecOpsLab01.csproj
 
-      - name: Build
+      - name: Build API
         run: dotnet build src/DevSecOpsApi/DevSecOpsLab01.csproj --configuration Release --no-restore
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN}}
+        with:
+          args: >
+            -Dsonar.organization=Hyrule-IaC
+            -Dsonar.projectKey=hyrule-iac
+            -Dsonar.projectName=DevSecOps-01
+            -Dsonar.sources=src
+            -Dsonar.exclusions=**/bin/**,**/obj/**,**/wwwroot/lib/**
+            -Dsonar.cs.vscoveragexml.reportsPaths=coverage.xml
+
+      - name: SonarCloud Quality Gate
+        uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: Snyk Open Source Scan
+        uses: snyk/actions/dotnet@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: test
+          args: --file=src/DevSecOpsApi/DevSecOpsLab01.csproj --severity-threshold=high
 
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -60,3 +87,13 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Snyk Container Scan
+        uses: snyk/actions/docker@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+          args:
+            --severity-threshold=high
