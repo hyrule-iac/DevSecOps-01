@@ -28,11 +28,11 @@ app.UseHttpMetrics();
 // 🏠 Interactive Lab Interface
 app.MapGet("/", () => Results.Content(@$"
     <html>
-        <body style='font-family:sans-serif; background:#0d0d0d; color:white; text-align:center; padding-top:50px;'>
-            <h1 style='color:#0078d4;'> .NET 10 DevSecOps Lab API</h1>
-            <p>Status: <span style='color:#00ff41;'>OPERATIONAL</span></p>
+        <body style='font-family:sans-serif; background:#1a0f0f; color:white; text-align:center; padding-top:50px;'>
+            <h1 style='color:#ff6b57;'> .NET 10 DevSecOps Lab API - CANARY V3</h1>
+                <p>Status: <span style='color:#ff6b57;'>CANARY V3</span></p>
             <div style='margin:20px;'>
-                <button onclick='fetch(""/click"")' style='padding:12px; background:#0078d4; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;'>Generate Traffic</button>
+                <button onclick='fetch(""/click"")' style='padding:12px; background:#ffd54a; color:black; border:none; border-radius:5px; cursor:pointer; font-weight:bold;'>Generate Traffic</button>
                 <button onclick='fetch(""/error"")' style='padding:12px; background:#d85a30; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;'>Simulate Error</button>
                 <button onclick='fetch(""/slow"")' style='padding:12px; background:#ffb900; color:black; border:none; border-radius:5px; cursor:pointer; font-weight:bold;'>Simulate Latency</button>
             </div>
