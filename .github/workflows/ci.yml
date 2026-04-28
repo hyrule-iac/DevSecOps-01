@@ -16,44 +16,34 @@ env:
 permissions:
   contents: read
   packages: write
+  security-events: write
 
 jobs:
   build-test-publish:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Git Code
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Setup .NET 10
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
 
-      - name: Restore API
+      - name: Restore
         run: dotnet restore src/DevSecOpsApi/DevSecOpsLab01.csproj
 
-      - name: Build API
+      - name: Build
         run: dotnet build src/DevSecOpsApi/DevSecOpsLab01.csproj --configuration Release --no-restore
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v4
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN}}
-        with:
-          args: >
-            -Dsonar.organization=Hyrule-IaC
-            -Dsonar.projectKey=hyrule-iac
-            -Dsonar.projectName=DevSecOps-01
-            -Dsonar.sources=src
-            -Dsonar.exclusions=**/bin/**,**/obj/**,**/wwwroot/lib/**
-            -Dsonar.cs.vscoveragexml.reportsPaths=coverage.xml
-
-      - name: SonarCloud Quality Gate
-        uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
-        timeout-minutes: 5
+        uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
       - name: Snyk Open Source Scan
         uses: snyk/actions/dotnet@master
         continue-on-error: true
@@ -95,5 +85,4 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
-          args:
-            --severity-threshold=high
+          args: --severity-threshold=high
