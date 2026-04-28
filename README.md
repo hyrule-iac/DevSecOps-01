@@ -1,6 +1,6 @@
 ---
 
-# Demo DevSecOps Lab v1
+# Demo DevSecOps Lab v2
 
 A professional-grade DevSecOps ecosystem designed for high-availability deployments, progressive delivery, and observability. This project serves as a technical showcase for implementing modern cloud-native patterns using **.NET 10**, **Argo Rollouts**, and **Prometheus**.
 
