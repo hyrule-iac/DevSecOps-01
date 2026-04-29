@@ -34,7 +34,7 @@ jobs:
       - name: Diagnostic - Check Cluster availability
         shell: powershell
         run: |
-          $maxRetries = 12 # Aumentamos un poco por el tiempo de arranque de .NET 10
+          $maxRetries = 15 # Aumentamos un poco por el tiempo de arranque de .NET 10
           for ($i=1; $i -le $maxRetries; $i++){
             try {
               # Nota: Asegúrate de que el Service esté mapeado al puerto 8086 de tu host
