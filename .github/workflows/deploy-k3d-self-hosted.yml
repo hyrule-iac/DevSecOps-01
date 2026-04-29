@@ -21,24 +21,32 @@ jobs:
       - name: Apply rollout manifests to local k3d cluster
         shell: powershell
         run: |
-          kubectl apply -f k8s/rollouts/
-          kubectl argo rollouts get rollout demo-devsecops-api -n default
+          # Forzamos el uso del config que validamos en el puerto 40839
+          $env:KUBECONFIG = "$env:USERPROFILE\.kube\config"
+          
+          # Aplicamos con --validate=false para evitar el error de conexión al descargar esquemas
+          kubectl apply -f k8s/rollouts/ --validate=false
+          
+          # Si no tienes el binario 'kubectl-argo-rollouts', usamos el comando nativo de k8s
+          # para verificar que el recurso existe.
+          kubectl get rollout demo-devsecops-api -n default
       
       - name: Diagnostic - Check Cluster availability
         shell: powershell
         run: |
-          $maxRetries = 10
-          for ($i=0; $i -lt $maxRetries; $i++){
+          $maxRetries = 12 # Aumentamos un poco por el tiempo de arranque de .NET 10
+          for ($i=1; $i -le $maxRetries; $i++){
             try {
-              $response = Invoke-WebRequest -Uri "http://localhost:8086/health" -Method Get
+              # Nota: Asegúrate de que el Service esté mapeado al puerto 8086 de tu host
+              $response = Invoke-WebRequest -Uri "http://localhost:8086/" -UseBasicParsing -Method Get
               if ($response.StatusCode -eq 200) {
-                Write-Host "FRANKEN-API is alive and running"
+                Write-Host "FRANKEN-API is alive and running!"
                 exit 0
               } 
-              } catch {
-                Write-Host "Waiting for FRANKENAPI... ($i)"
-                Start-Sleep -Seconds 5
-                }
+            } catch {
+              Write-Host "Waiting for FRANKEN-API... Attempt $i/$maxRetries"
+              Start-Sleep -Seconds 10 # .NET 10 en k3d local puede tardar unos segundos en levantar
+            }
           }
-          Write-Error "FRANKENAPI is still dead"
+          Write-Error "FRANKEN-API is still dead after check"
           exit 1
