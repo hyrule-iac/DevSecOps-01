@@ -18,7 +18,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  # Forzamos minúsculas para evitar problemas con Docker/GHCR
   IMAGE_NAME: ${{ github.repository_owner }}/devsecopslab01
 
 permissions:
@@ -31,10 +30,17 @@ jobs:
       - name: Repo Pull
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
-      - name: secret-scan
-        run: |
-          docker run -v ${{ github.workspace }}:/path zricethezav/gitleaks:latest detect --source="/path" -v
+          # Para un escaneo de secretos real, necesitamos el historial
+          fetch-depth: 0 
+
+      - name: Gitleaks Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          # Aquí inyectamos la llave que te mandó Zach
+          GITLEAKS_LICENSE_KEY: ${{ secrets.GITLEAKS_LICENSE_KEY }}
+        with:
+          # 'detect' es para buscar en todo el repo, 'protect' para cambios nuevos
+          args: detect --source=. -v --redact
 
   iac-scan:
     needs: [secret-scan]
@@ -118,7 +124,6 @@ jobs:
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
         with:
-          # Usamos el tag 'latest' local que se acaba de construir
           image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           artifact-name: sbom.json
           format: spdx-json
@@ -129,6 +134,6 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          # Usamos el tag 'latest' para asegurar que el scanner encuentre la imagen localmente
           image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           args: --severity-threshold=high
+          
