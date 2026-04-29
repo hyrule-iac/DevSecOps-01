@@ -42,7 +42,7 @@ jobs:
       - name: Checkov
         uses: bridgecrewio/checkov-action@master
         with:
-          directory: terraform/
+          directory: ./terraform
           framework: terraform
           soft_fail: false
           quiet: true
