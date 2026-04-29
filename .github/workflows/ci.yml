@@ -36,8 +36,8 @@ jobs:
       - name: Gitleaks Scan
         uses: gitleaks/gitleaks-action@v2
         env:
-          # Aquí inyectamos la llave que te mandó Zach
-          GITLEAKS_LICENSE_KEY: ${{ secrets.GITLEAKS_LICENSE_KEY }}
+          # Aquí inyectamos la llave
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
         with:
           # 'detect' es para buscar en todo el repo, 'protect' para cambios nuevos
           args: detect --source=. -v --redact
