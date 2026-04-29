@@ -61,7 +61,7 @@ spec:
     spec:
       containers:
         - name: demo-devsecops-api
-          image: ghcr.io/hyrule-iac/devsecopslab01:sha-facb6c6
+          image: ghcr.io/hyrule-iac/devsecopslab01:sha-9a5ae95
           imagePullPolicy: IfNotPresent
           env:
             - name: ASPNETCORE_URLS
