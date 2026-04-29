@@ -65,7 +65,7 @@ spec:
           imagePullPolicy: IfNotPresent
           env:
             - name: ASPNETCORE_URLS
-              value: http://+:8080
+              value: http://+:8086
           ports:
             - name: http
               containerPort: 8080
