@@ -27,7 +27,8 @@ jobs:
   secret-scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Repo Pull
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
       - name: Gitleaks Scan (Manual)
@@ -39,10 +40,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-      - name : Acquiring Repository
+      - name : Acquiring Repository for Checkov
         uses: actions/checkout@v4
         
-      - name: List files
+      - name: "---Debug:List files----"
         run: ls -R
       - name: Checkov
         uses: bridgecrewio/checkov-action@master
@@ -115,7 +116,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
       
       - name: Generate Software Billing Of Materials SBOM
-        uses: anchore/sbom-action@0
+        uses: anchore/sbom-action@v0
         with:
           image : ${{env.REGISTRY}}/${{ env.IMAGE_NAME}}:sha-${{ github.sha}}
           artifact-name: sbom.json
