@@ -70,5 +70,10 @@ app.MapGet("/slow", async () => {
 
 // Expose Prometheus Scraping Endpoint
 app.MapMetrics();
-
+app.MapGet("/health", () => {
+    var isHealthy = true; // aquí puedes meter lógica real después
+    return isHealthy 
+        ? Results.Ok("Healthy") 
+        : Results.Problem("Unhealthy", statusCode: 500);
+});
 app.Run();

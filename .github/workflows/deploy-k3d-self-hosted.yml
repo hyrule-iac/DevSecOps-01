@@ -13,40 +13,91 @@ on:
 jobs:
   deploy:
     runs-on: self-hosted
+
     env:
-      # Definimos el KUBECONFIG global para que todos los pasos lo usen por defecto
       KUBECONFIG: "C:\\k3dconfig\\config"
+      APP_NAME: demo-devsecops-api
+      NAMESPACE: default
+      SERVICE_NAME: demo-devsecops-api-stable
+      LOCAL_PORT: 8086
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Apply rollout manifests to local k3d cluster
+      - name: Validate kubectl connectivity
         shell: powershell
         run: |
-          # Usamos la variable de entorno definida en el job
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Apply rollout manifests
+        shell: powershell
+        run: |
+          Write-Host "Applying Kubernetes manifests..."
           kubectl apply -f k8s/rollouts/ --validate=false
 
-      - name: Wait for Rollout and Analysis Completion
+      - name: Wait for Rollout (Argo)
         shell: powershell
         run: |
-          Write-Host "Monitoring Argo Rollout status..."
-          # Este comando reemplaza tu loop manual. 
-          # Se bloquea hasta que el estado sea 'Healthy' o 'Degraded'.
-          # Agregamos un timeout de 10 minutos (600s) por si el análisis es largo.
-          kubectl argo rollouts status demo-devsecops-api -n default --timeout 600s
+          Write-Host "Waiting for rollout to become Healthy..."
+          kubectl argo rollouts status $env:APP_NAME -n $env:NAMESPACE --timeout 600s
 
-      - name: Final Health Check - Service Availability
+      # 🧠 VALIDACIÓN 1: Dentro del cluster (más confiable)
+      - name: In-Cluster Health Check (curl pod)
         shell: powershell
         run: |
-          # Solo ejecutamos esto una vez que el rollout confirmó que está Healthy.
-          # Verificamos que el puerto 8086 sea alcanzable desde el host.
-          try {
-            $response = Invoke-WebRequest -Uri "http://localhost:8086/" -UseBasicParsing -Method Get -TimeoutSec 5
-            if ($response.StatusCode -eq 200) {
-              Write-Host "SUCCESS: FRANKEN-API is reachable at port 8086!"
-            }
-          } catch {
-            Write-Error "ERROR: Rollout is Healthy but Service is unreachable at localhost:8086"
+          Write-Host "Running in-cluster health check..."
+
+          kubectl run curl-test `
+            --rm -i --restart=Never `
+            --image=curlimages/curl `
+            --command -- `
+            curl -s -o /dev/null -w "%{http_code}" http://$env:SERVICE_NAME.$env:NAMESPACE.svc.cluster.local/health > result.txt
+
+          $code = Get-Content result.txt
+
+          if ($code -ne "200") {
+            Write-Error "ERROR: In-cluster health check failed with HTTP $code"
             exit 1
+          } else {
+            Write-Host "SUCCESS: In-cluster health check passed (200)"
           }
+
+      # 🌐 VALIDACIÓN 2: Desde el host (simula tu pipeline original)
+      - name: External Health Check (port-forward)
+        shell: powershell
+        run: |
+          Write-Host "Starting port-forward..."
+
+          $pf = Start-Process -NoNewWindow -PassThru powershell -ArgumentList @"kubectl port-forward svc/$env:SERVICE_NAME $env:LOCAL_PORT:80"@
+
+          Start-Sleep -Seconds 5
+
+          try {
+            $response = Invoke-WebRequest `
+              -Uri "http://localhost:$env:LOCAL_PORT/health" `
+              -UseBasicParsing `
+              -TimeoutSec 10
+
+            if ($response.StatusCode -eq 200) {
+              Write-Host "SUCCESS: External health check passed!"
+            } else {
+              Write-Error "ERROR: Unexpected status code $($response.StatusCode)"
+              exit 1
+            }
+
+          } catch {
+            Write-Error "ERROR: External health check failed"
+            exit 1
+
+          } finally {
+            if ($pf) {
+              Stop-Process -Id $pf.Id -Force
+            }
+          }
+
+      - name: Final Status
+        shell: powershell
+        run: |
+          Write-Host "🎉 Deployment + Verification COMPLETED SUCCESSFULLY"
