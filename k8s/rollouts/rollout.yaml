@@ -6,7 +6,6 @@ metadata:
     app: demo-devsecops-api
 spec:
   selector:
-    # Argo Rollouts inyectará automáticamente un hash aquí para apuntar solo al set estable
     app: demo-devsecops-api
   ports:
     - name: http
@@ -21,7 +20,6 @@ metadata:
     app: demo-devsecops-api
 spec:
   selector:
-    # Argo Rollouts inyectará automáticamente un hash aquí para apuntar solo al set canary
     app: demo-devsecops-api
   ports:
     - name: http
@@ -59,8 +57,12 @@ spec:
   template:
     metadata:
       labels:
-        app: demo-devsecops-api # Este label es la base para el filtrado
+        app: demo-devsecops-api
     spec:
+      # --- CORRECCIÓN AQUÍ ---
+      imagePullSecrets:
+        - name: ghcr-auth # Este secreto debe existir en el clúster
+      # ------------------------
       containers:
         - name: demo-devsecops-api
           image: ghcr.io/hyrule-iac/devsecopslab01:sha-9a14c65
@@ -88,9 +90,6 @@ spec:
       stableService: demo-devsecops-api-stable
       canaryService: demo-devsecops-api-canary
       trafficRouting:
-        # IMPORTANTE: Al no usar un Service Mesh (Istio/Linkerd) o Ingress (Nginx), 
-        # Argo usará el "setWeight" basado en la proporción de réplicas (3 pods).
-        # Para 20%, intentará aproximarlo con el número de pods disponibles.
         managed-tokens: {} 
       steps:
         - setWeight: 20
