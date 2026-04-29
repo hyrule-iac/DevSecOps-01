@@ -1,0 +1,6 @@
+{
+    "sonarlint.connectedMode.project": {
+        "connectionId": "hyrule-iac",
+        "projectKey": "DevSecOps-01"
+    }
+}

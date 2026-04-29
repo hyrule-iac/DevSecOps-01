@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "k8s/rollouts/rollout.yaml"
+      - "README.md"    
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "k8s/rollouts/rollout.yaml"
+      - "README.md"
+    
+  workflow_dispatch:
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/devsecopslab01
+
+permissions:
+  contents: read
+
+
+jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gitleaks Scan (Manual)
+        run: |
+          docker run -v ${{ github.workspace }}:/path zricethezav/gitleaks:latest detect --source="/path" -v
+
+  iac-scan:
+    needs : [secret-scan]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: terraform/
+          framework: terraform/
+          soft_fail: false
+          quiet: true
+
+  build-test-publish:
+    name: Build and Security Analysis
+    needs: [secret-scan, iac-scan]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore src/DevSecOpsApi/DevSecOpsLab01.csproj
+
+      - name: Build
+        run: dotnet build src/DevSecOpsApi/DevSecOpsLab01.csproj --configuration Release --no-restore
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Snyk Open Source Scan
+        uses: snyk/actions/dotnet@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: test
+          args: --file=src/DevSecOpsApi/DevSecOpsLab01.csproj --severity-threshold=high
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push image
+        id: docker_build1
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+      
+      - name: Generate Software Billing Of Materials SBOM
+        uses: anchore/sbom-action@0
+        with:
+          image : ${{env.REGISTRY}}/${{ env.IMAGE_NAME}}:sha-${{ github.sha}}
+          artifact-name: sbom.json
+          output-format: spdx-json
+      - name: Snyk Container Scan
+        uses: snyk/actions/docker@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+          args: --severity-threshold=high

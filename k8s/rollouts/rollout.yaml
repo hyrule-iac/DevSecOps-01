@@ -1,0 +1,101 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-devsecops-api-stable
+  labels:
+    app: demo-devsecops-api
+spec:
+  selector:
+    app: demo-devsecops-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-devsecops-api-canary
+  labels:
+    app: demo-devsecops-api
+spec:
+  selector:
+    app: demo-devsecops-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: demo-devsecops-api
+  labels:
+    release: obs
+spec:
+  selector:
+    matchLabels:
+      app: demo-devsecops-api
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+  namespaceSelector:
+    matchNames:
+      - default
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: demo-devsecops-api
+spec:
+  replicas: 3
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: demo-devsecops-api
+  template:
+    metadata:
+      labels:
+        app: demo-devsecops-api
+    spec:
+      containers:
+        - name: demo-devsecops-api
+          image: ghcr.io/hyrule-iac/devsecopslab01:sha-bb67fe0
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: ASPNETCORE_URLS
+              value: http://+:8080
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 20
+  strategy:
+    canary:
+      stableService: demo-devsecops-api-stable
+      canaryService: demo-devsecops-api-canary
+      steps:
+        - setWeight: 20
+        - pause:
+            duration: 30s
+        - analysis:
+            templates:
+              - templateName: success-rate-check
+        - setWeight: 50
+        - pause:
+            duration: 30s
+        - analysis:
+            templates:
+              - templateName: success-rate-check
+        - setWeight: 100

@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/DevSecOpsApi/">
+    <Project Path="src/DevSecOpsApi/DevSecOpsLab01.csproj" />
+  </Folder>
+</Solution>

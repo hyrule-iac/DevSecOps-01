@@ -1,0 +1,97 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/devsecopslab01
+
+permissions:
+  contents: write
+
+jobs:
+  update-rollout-manifest:
+    # Solo se ejecuta si el CI fue exitoso y ocurrió en main, o si se dispara manualmente
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main'
+      )
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
+
+      - name: Compute image reference
+        id: image
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # En disparo manual usa el SHA del commit actual
+            SHA="${GITHUB_SHA}"
+          else
+            # En workflow_run usa el SHA del commit que disparó el CI
+            SHA="${{ github.event.workflow_run.head_sha }}"
+          fi
+          echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Update rollout image (Python)
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          path = Path("k8s/rollouts/rollout.yaml")
+          new_image = "${{ steps.image.outputs.image }}"
+
+          if not path.exists():
+              print(f"::error::Archivo {path} no encontrado")
+              exit(1)
+
+          content = path.read_text()
+          lines = content.splitlines()
+          updated = False
+
+          for i, line in enumerate(lines):
+              # Buscamos la línea que contiene 'image:' dentro de los specs del contenedor
+              if "image:" in line:
+                  # Preservamos la indentación original (espacios iniciales)
+                  indent = line[:line.find("image:")]
+                  lines[i] = f"{indent}image: {new_image}"
+                  updated = True
+                  break
+          
+          if updated:
+              path.write_text("\n".join(lines) + "\n")
+              print(f"Imagen actualizada a: {new_image}")
+          else:
+              print("::error::No se encontró la línea 'image:' en el archivo")
+              exit(1)
+          PY
+
+      - name: Commit and Push changes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add k8s/rollouts/rollout.yaml
+          
+          # Solo hace commit si hay cambios reales para evitar fallos en el pipeline
+          if git diff --cached --quiet; then
+            echo "No hay cambios en el manifiesto."
+            exit 0
+          fi
+          
+          git commit -m "cd: update rollout image to ${{ steps.image.outputs.image }}"
+          git push origin main
