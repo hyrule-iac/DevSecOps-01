@@ -23,13 +23,13 @@ jobs:
       - name: Apply rollout manifests to local k3d cluster
         shell: powershell
         run: |
-          # 1. Definimos la ruta explícita (asegúrate que Aldo sea tu usuario)
-          $KUBE_PATH = "C:\Users\Aldo\.kube\config"
+          # Ruta neutral fuera del perfil de usuario
+          $KUBE_PATH = "C:\k3dconfig\config"
           
-          # 2. Aplicamos usando el flag --kubeconfig
+          # Aplicamos usando el flag directo
           kubectl apply --kubeconfig=$KUBE_PATH -f k8s/rollouts/ --validate=false
           
-          # 3. Verificamos el rollout con el mismo flag
+          # Verificamos
           kubectl get rollout demo-devsecops-api -n default --kubeconfig=$KUBE_PATH
       - name: Diagnostic - Check Cluster availability
         shell: powershell
