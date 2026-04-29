@@ -68,7 +68,7 @@ spec:
               value: http://+:8086
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: 8086
           readinessProbe:
             httpGet:
               path: /
